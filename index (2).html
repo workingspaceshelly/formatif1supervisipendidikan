@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ujian Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#152238;
+    --paper:#f4f7fc;
+    --line:#d7e2f2;
+    --accent:#1d4ed8;
+    --accent-soft:#e8f0fe;
+    --danger:#b3261e;
+    font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    padding:32px 16px 80px;
+    line-height:1.5;
+  }
+  .sheet{
+    max-width:680px;
+    margin:0 auto;
+    background:#fff;
+    border:1px solid var(--line);
+    padding:36px 32px;
+  }
+  h1{
+    font-size:1.5rem;
+    margin:0 0 4px;
+    font-weight:600;
+  }
+  .sub{
+    color:#5a6c8a;
+    font-size:.92rem;
+    margin-bottom:28px;
+    padding-bottom:20px;
+    border-bottom:1px solid var(--line);
+  }
+  label{
+    display:block;
+    font-size:.85rem;
+    color:#46557a;
+    margin:16px 0 6px;
+  }
+  input[type=text]{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    font-family:inherit;
+    font-size:1rem;
+    color:var(--ink);
+  }
+  input[type=text]:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .q{
+    margin:28px 0;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+  .q:first-of-type{border-top:none;}
+  .q-num{
+    font-size:.8rem;
+    color:var(--accent);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .q-text{
+    font-size:1.05rem;
+    margin-bottom:12px;
+  }
+  .opt{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:9px 10px;
+    margin-bottom:4px;
+    cursor:pointer;
+    border:1px solid transparent;
+  }
+  .opt:hover{background:var(--accent-soft);}
+  .opt input{margin-top:4px;}
+  .opt.correct{border-color:var(--accent); background:var(--accent-soft);}
+  .opt.wrong{border-color:var(--danger); background:#fbe9e7;}
+  button{
+    font-family:inherit;
+    font-size:1rem;
+    padding:12px 24px;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    cursor:pointer;
+    margin-top:24px;
+  }
+  button:hover{background:#1740b0;}
+  button:disabled{background:#9caed0; cursor:not-allowed;}
+  #result{
+    display:none;
+    text-align:center;
+    padding:28px 0 8px;
+  }
+  #result .score{
+    font-size:2.6rem;
+    font-weight:700;
+    color:var(--accent);
+    margin:6px 0;
+  }
+  #status{
+    font-size:.85rem;
+    color:#5a6c8a;
+    margin-top:10px;
+  }
+  .err{color:var(--danger); font-size:.85rem; margin-top:6px;}
+  .hint{color:#8792a8; font-size:.8rem;}
+  #timerBar{
+    position:sticky;
+    top:0;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:var(--accent-soft);
+    border:1px solid var(--line);
+    padding:10px 16px;
+    margin:-36px -32px 24px;
+    font-size:.9rem;
+    font-weight:600;
+    color:var(--ink);
+  }
+  #timerBar.warn{background:#fbe9e7; color:var(--danger);}
+  #timeLeft{font-variant-numeric:tabular-nums; font-size:1.05rem;}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div id="timerBar">
+    <span>Sisa waktu pengerjaan</span>
+    <span id="timeLeft">30:00</span>
+  </div>
+
+  <h1>Ujian Formatif 1</h1>
+  <div class="sub">Silakan Anda mengisikan data diri dengan lengkap dan menjawab soal dengan tepat sesuai dengan kemampuan sendiri. Kecurangan dalam bentuk apapun dapat menggugurkan nilai Anda.</div>
+
+  <form id="quizForm">
+    <label for="name">Nama Lengkap *</label>
+    <input type="text" id="name" required>
+
+    <label for="nim">NIM / ID *</label>
+    <input type="text" id="nim" required>
+
+    <label for="kelas">Kelas *</label>
+    <input type="text" id="kelas" required>
+
+    <div id="questions"></div>
+
+    <button type="submit" id="submitBtn">Submit</button>
+    <div id="status"></div>
+  </form>
+
+  <div id="result">
+    <div class="hint">Nilai Kamu</div>
+    <div class="score" id="scoreText">0/0</div>
+    <div class="hint" id="detailText"></div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   1) SOAL — edit array ini sesuai kebutuhanmu.
+      correct = index jawaban benar (0 = a, 1 = b, dst)
+   ========================================================= */
+const QUESTIONS = [
+  { text: "Menurut Wiles (1987), supervisi pendidikan adalah...", options: ["Proses evaluasi kinerja guru secara berkala", "Rangkaian kegiatan pembinaan untuk memperbaiki pengajaran guru", "Usaha menstimulasi dan membimbing pertumbuhan guru secara kontinu", "Bantuan untuk mengembangkan situasi belajar mengajar yang lebih bai"], correct: 3 },
+  { text: "Berikut ini yang BUKAN merupakan tujuan supervisi pendidikan sebagaimana disebutkan dalam materi adalah...", options: ["Mengembangkan metode-metode baru demi kemajuan proses belajar mengajar", "Menentukan besaran tunjangan guru berprestasi", "Membina kerja sama yang harmonis antara guru, murid, dan TAS", "Membangkitkan dan mendorong semangat guru dan TAS menjalankan tugas sebaik-baiknya"], correct: 1 },
+  { text: "Salah satu tujuan khusus supervisi adalah menyediakan umpan balik yang obyektif terhadap guru. Maksud dari umpan balik ini adalah terkait dengan...", options: ["Jadwal mengajar guru", "Riwayat pendidikan guru", "Pembelajaran yang telah dilakukan oleh guru", "Hubungan pribadi guru dan peserta didik"], correct: 2 },
+  { text: "Salah satu indikator keberhasilan supervisi pendidikan adalah...", options: ["Bertambahnya jumlah guru baru di sekolah", "Meningkatnya kemampuan guru dalam merencanakan, melaksanakan, dan mengevaluasi proses pembelajaran", "Meningkatnya jumlah rapat guru di sekolah", "Bertambahnya anggaran operasional di sekolah"], correct: 1 },
+  { text: "Dalam model hubungan pola perilaku dan kematangan organisasi pendidikan, sekolah yang berorientasi pada sumber daya manusia dan birokrasi sekolah (transitional schools) dicirikan dengan...", options: ["Pencapaian tujuan sekolah melalui SDM dan birokrasi yang seimbang", "Peningkatan jumlah bangunan sekolah", "Tujuan sekolah secara birokratis semata", "Pengurangan jumlah siswa"], correct: 0 },
+  { text: "Dalam model 'Supervision as Developmental' menurut Glickman yang termasuk prasyarat (prerequisites) yang harus dimiliki sebelum menjalankan tugas teknis (technical tasks) supervisi adalah...", options: ["Teachers working hours", "Knowledge, interpersonal skills, and technical skills", "Knowledge, interpersonal skills, and curriculum development", "Teachers' workload, interpersonal skills, and technical skills"], correct: 1 },
+  { text: "Pada 'Prototipe Supervisi' berbentuk empat kuadran (rendah–tinggi), guru yang berada pada posisi Kuadran III termasuk...", options: ["Professional", "Drop Out", "Analitical Observer", "Unfocused Worker"], correct: 2 },
+  { text: "Dalam pergeseran paradigma supervisi akademik, ciri Model Modern (Kemitraan) adalah...", options: ["Menilai kelengkapan administrasi guru", "Memposisikan guru sebagai objek pemeriksaan", "Dilakukan dengan tanpa koordinasi Kepala Sekolah oleh guru senior sebagai sejawat", "Memposisikan guru sebagai mitra pengembangan profesional"], correct: 3 },
+  { text: "Berikut ini yang BUKAN termasuk prinsip utama supervisi akademik menurut materi adalah...", options: ["Demokratis", "Kompetitif", "Berkelanjutan", "Inovatif"], correct: 1 },
+  { text: "Peran kepala sekolah sebagai supervisor yang bertugas menyelaraskan program supervisi dengan tujuan pendidikan sekolah adalah peran sebagai...", options: ["Konsultan", "Evaluator", "Koordinator", "Pemimpin Tim"], correct: 2 },
+  { text: "Kepala sekolah yang menilai capaian dan kesesuaian praktik mengajar guru dengan standar sedang menjalankan peran sebagai...", options: ["Konsultan", "Evaluator", "Koordinator", "Pemimpin Tim"], correct: 1 },
+  { text: "Tahapan supervisi akademik yang berfokus pada analisis kebutuhan guru dan keselarasan dengan visi sekolah, dengan aktivitas penetapan tujuan bersama, penjadwalan, dan penyusunan instrumen, adalah tahap...", options: ["Perencanaan", "Tindak Lanjut", "Pelaksanaan", "Evaluasi"], correct: 0 },
+  { text: "Aktivitas berupa pembinaan, pelatihan, pendampingan, dan lesson study untuk pengembangan profesional guru secara berkelanjutan termasuk dalam tahap...", options: ["Perencanaan", "Tindak Lanjut", "Pelaksanaan", "Evaluasi"], correct: 1 },
+  { text: "Teknik observasi kelas di mana supervisor ikut terlibat langsung dalam proses pembelajaran disebut teknik...", options: ["Kategorikal", "Kolegial", "Partisipatif", "Naratif"], correct: 2 },
+  { text: "Berikut ini yang BUKAN termasuk tujuh komponen inti supervisi manajerial adalah...", options: ["Kompetensi pedagogik guru", "Sarana dan Prasarana", "Hubungan masyarakat", "Peserta didik"], correct: 0 },
+  { text: "Komponen supervisi manajerial yang mencakup pengelolaan perpustakaan, laboratorium, dan sistem informasi adalah...", options: ["Tenaga pendidik dan kependidikan", "Kurikulum", "Layanan Khusus", "Keuangan"], correct: 2 },
+  { text: "Tahap dalam siklus implementasi supervisi manajerial yang berfokus pada menata sumber daya, peran, dan instrumen supervisi agar siap dijalankan secara sistematis disebut tahap...", options: ["Perencanaan", "Pelaksanaan", "Pengorganisasian", "Tindak Lanjut"], correct: 2 },
+  { text: "Teknik pelaksanaan supervisi manajerial yang menekankan komunikasi dua arah dan sesi umpan balik rutin untuk membangun kepercayaan diri serta kedisiplinan staf adalah teknik...", options: ["Coaching dan komunikasi", "Evaluasi berbasis data", "Observasi langsung", "Rapor Pendidikan"], correct: 0 },
+  { text: "Berikut ini yang BUKAN termasuk tantangan dan keterbatasan implementasi supervisi manajerial menurut materi adalah...", options: ["Keterbatasan waktu dan SDM", "Penekanan pada kepatuhan administrasi", "Kurangnya minat guru dalam mengikuti workshop", "Belum ada tim struktural supervisi"], correct: 2 },
+  { text: "Tantangan yang menjelaskan bahwa kekakuan regulasi dengan permintaan dokumen berlebih, memicu keterlambatan peningkatan performa TAS, disebut...", options: ["Keterbatasan waktu dan SDM", "Penekanan pada kepatuhan administrasi", "Kurangnya minat guru dalam mengikuti workshop", "Belum ada tim struktural supervisi"], correct: 2 },
+  { text: "Menurut Sergiovanni (1983), supervisi merupakan usaha untuk...", options: ["Evaluasi kinerja guru secara berkala untuk kenaikan pangkat", "Menstimulasi, mengoordinasi, dan membimbing secara kontinu pertumbuhan guru-guru di sekolah agar lebih efektif mewujudkan fungsi pengajaran", "Rangkaian kegiatan pembinaan oleh supervisor untuk memperbaiki pengajaran guru", "Bantuan untuk mengembangkan situasi belajar mengajar yang lebih baik"], correct: 1 },
+  { text: "Neagley dan Evans (1980) mengemukakan bahwa supervisi pada hakikatnya adalah...", options: ["Bantuan untuk mengembangkan situasi belajar mengajar yang lebih baik", "Usaha menstimulasi dan membimbing pertumbuhan guru secara kontinu", "Rangkaian kegiatan pembinaan oleh supervisor untuk memperbaiki pengajaran guru demi tercapainya hasil belajar siswa yang optimal", "Proses evaluasi kinerja guru secara berkala"], correct: 2 },
+  { text: "Tujuan supervisi pendidikan berupa mengembangkan, mencari, dan menggunakan metode-metode baru dimaksudkan untuk...", options: ["Kemajuan proses belajar dan mengajar yang baik", "Menentukan besaran tunjangan guru", "Menambah jumlah guru di sekolah", "Menyusun kurikulum baru dari nol"], correct: 0 },
+  { text: "Salah satu tujuan supervisi membina kerja sama yang harmonis antara guru, murid, dan pegawai sekolah dapat dilakukan misalnya dengan mengadakan...", options: ["Ujian akhir semester bersama", "Seminar, workshop, in-service, maupun training", "Rapat evaluasi tahunan", "Studi banding ke luar negeri"], correct: 1 },
+  { text: "Tujuan umum supervisi pendidikan adalah...", options: ["Guru memiliki kemampuan untuk memperbaiki dirinya dalam melaksanakan proses pembelajaran", "Guru mendapat kenaikan pangkat secara otomatis", "Kepala sekolah dapat menilai kelengkapan administrasi guru", "Sekolah memperoleh akreditasi tertinggi"], correct: 0 },
+  { text: "Salah satu tujuan khusus supervisi adalah mengevaluasi guru. Menurut materi, evaluasi ini terutama ditujukan untuk kepentingan...", options: ["Promosi jabatan dan keputusan lainnya", "Penetapan gaji pokok guru", "Pemberian sanksi disiplin", "Penentuan jumlah jam mengajar"], correct: 0 },
+  { text: "Tujuan khusus supervisi akademik berupa membantu guru mengembangkan keterampilannya berkaitan dengan penggunaan...", options: ["Media sosial di dalam kelas", "Strategi pembelajaran", "Perangkat administrasi sekolah", "Sistem penilaian kinerja guru"], correct: 1 },
+  { text: "Selain meningkatnya kemampuan guru merencanakan, melaksanakan, dan mengevaluasi pembelajaran, salah satu indikator keberhasilan supervisi pendidikan adalah...", options: ["Terjalinnya hubungan kolegial antara kepala sekolah dengan guru dalam memecahkan masalah pembelajaran", "Bertambahnya jumlah kelas di sekolah", "Meningkatnya jumlah siswa yang mendaftar", "Berkurangnya jumlah guru honorer"], correct: 0 },
+  { text: "Pada model hubungan pola perilaku dan kematangan organisasi pendidikan, sekolah yang berakar pada teori klasik-tradisional dan manajemen ilmiah disebut sekolah...", options: ["Profesional", "Transisional", "Birokratis (Bureaucratically oriented schools)", "Kolegial"], correct: 2 },
+  { text: "Pada Prototipe Supervisi berbentuk empat kuadran, guru yang berada pada posisi Kuadran I disebut...", options: ["Profesional", "Pengamat analitik", "Kerjanya tidak terfokus", "Drop Out"], correct: 3 },
+];
+
+/* =========================================================
+   2) GOOGLE SHEETS — tempel URL Web App Apps Script kamu di sini.
+      Cara bikinnya ada di file google-apps-script.js
+   ========================================================= */
+const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw3JP-KfJTOA7QWHqbqdFP43GtbJx65e6nyGHoPET9Ha8C2fJtImlq4O_ktnQPdIN-5dQ/exec";
+
+/* ========================================================= */
+
+const qContainer = document.getElementById("questions");
+
+QUESTIONS.forEach((q, qi) => {
+  const div = document.createElement("div");
+  div.className = "q";
+  div.innerHTML = `
+    <div class="q-num">Soal ${qi + 1}</div>
+    <div class="q-text">${q.text}</div>
+    ${q.options.map((opt, oi) => `
+      <label class="opt" data-qi="${qi}" data-oi="${oi}">
+        <input type="radio" name="q${qi}" value="${oi}" required>
+        <span>${String.fromCharCode(97 + oi)}. ${opt}</span>
+      </label>
+    `).join("")}
+  `;
+  qContainer.appendChild(div);
+});
+
+let examSubmitted = false;
+
+async function submitExam(autoSubmitted) {
+  if (examSubmitted) return;
+  examSubmitted = true;
+  clearInterval(timerInterval);
+
+  const name = document.getElementById("name").value.trim();
+  const nim = document.getElementById("nim").value.trim();
+  const kelas = document.getElementById("kelas").value.trim();
+
+  let correctCount = 0;
+  const answers = [];
+
+  QUESTIONS.forEach((q, qi) => {
+    const picked = document.querySelector(`input[name="q${qi}"]:checked`);
+    const oi = picked ? parseInt(picked.value, 10) : -1;
+    const isCorrect = oi === q.correct;
+    if (isCorrect) correctCount++;
+    answers.push(String.fromCharCode(97 + oi));
+
+    // tampilkan jawaban benar/salah di layar
+    document.querySelectorAll(`.opt[data-qi="${qi}"]`).forEach(el => {
+      const eoi = parseInt(el.dataset.oi, 10);
+      if (eoi === q.correct) el.classList.add("correct");
+      else if (eoi === oi) el.classList.add("wrong");
+    });
+  });
+
+  const score = correctCount;
+  const total = QUESTIONS.length;
+
+  document.getElementById("submitBtn").disabled = true;
+  document.getElementById("status").textContent = "Mengirim jawaban...";
+
+  const payload = {
+    name, nim, kelas,
+    score, total,
+    answers: answers.join(","),
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    if (SHEET_WEBHOOK_URL && !SHEET_WEBHOOK_URL.startsWith("PASTE_")) {
+      await fetch(SHEET_WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors", // Apps Script tidak mengirim CORS header, ini normal
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload)
+      });
+      document.getElementById("status").textContent = "Jawaban tersimpan.";
+    } else {
+      document.getElementById("status").innerHTML = '<span class="err">SHEET_WEBHOOK_URL belum diisi — nilai ini belum tersimpan ke Sheets.</span>';
+    }
+  } catch (err) {
+    document.getElementById("status").innerHTML = '<span class="err">Gagal mengirim ke Sheets, tapi nilai kamu tetap tercatat di layar ini.</span>';
+  }
+
+  document.getElementById("scoreText").textContent = `${score}/${total}`;
+  document.getElementById("detailText").textContent = `${name} — ${nim} — ${kelas}`;
+  if (autoSubmitted) {
+    document.getElementById("timerBar").textContent = "⏱ Waktu habis — jawaban dikumpulkan otomatis.";
+  }
+  document.getElementById("result").style.display = "block";
+  document.getElementById("result").scrollIntoView({ behavior: "smooth" });
+}
+
+document.getElementById("quizForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  submitExam(false);
+});
+
+/* =========================================================
+   3) TIMER — batas waktu pengerjaan keseluruhan (menit)
+   ========================================================= */
+const EXAM_DURATION_MINUTES = 30;
+let secondsLeft = EXAM_DURATION_MINUTES * 60;
+const timerEl = document.getElementById("timeLeft");
+const timerBarEl = document.getElementById("timerBar");
+
+function renderTimer() {
+  const m = Math.floor(secondsLeft / 60);
+  const s = secondsLeft % 60;
+  timerEl.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  if (secondsLeft <= 300) timerBarEl.classList.add("warn"); // sisa 5 menit -> merah
+}
+
+renderTimer();
+const timerInterval = setInterval(() => {
+  secondsLeft--;
+  if (secondsLeft <= 0) {
+    secondsLeft = 0;
+    renderTimer();
+    submitExam(true); // waktu habis, kirim otomatis
+    return;
+  }
+  renderTimer();
+}, 1000);
+</script>
+</body>
+</html>
